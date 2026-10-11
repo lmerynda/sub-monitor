@@ -27,6 +27,7 @@ Open **http://localhost:3001**. Keep this server running for scheduled push remi
 - Enter the name, price, last charge date, and billing cycle (weekly, monthly, quarterly, or yearly).
 - The calendar shows the recorded charge and projected renewals. Monthly and annual dates retain the original anchor through short months and leap years.
 - View estimated monthly spending, upcoming renewals, categories, and active/inactive subscriptions. Changing the currency changes labels, not exchange rates.
+- Phones open in list view with readable renewal details. You can switch to the calendar grid; subscription lists and forms adapt to narrow screens with larger controls. Estimated monthly cost normalizes billing cycles and is not the amount charged in a specific calendar month.
 - Subscriptions are stored in this browser. Export/import JSON backups in Settings. There are no accounts or cross-device sync.
 - Tabs share updates automatically. Saves merge with the latest workspace; conflicting edits to the same subscription ask you to reopen it. Safe saving uses Web Locks, requiring a current browser over HTTPS or localhost. Reminder updates are also coordinated across tabs and use the latest saved data.
 - Sample data is opt-in, visibly labeled, never saved to your workspace, and never sent for reminders. Adding a subscription exits sample mode.

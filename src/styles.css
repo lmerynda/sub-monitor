@@ -2513,3 +2513,369 @@ h1 {
 .all-subscriptions {
   color: #89759f;
 }
+
+/* Phone layouts give text and touch targets room instead of scaling down. */
+@media (max-width: 740px) {
+  .nav-link {
+    flex-direction: column;
+    gap: 6px;
+    min-height: 64px;
+    font-size: 12px;
+    position: relative;
+  }
+  .nav-link svg {
+    width: 19px;
+  }
+  .nav-badge {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    font-size: 11px;
+  }
+  .breadcrumb,
+  .eyebrow {
+    font-size: 11px;
+  }
+  .page-header p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .page-header {
+    gap: 14px;
+  }
+  .page-header h1 {
+    font-size: 28px;
+  }
+  .header-divider {
+    display: none;
+  }
+  .header-actions {
+    gap: 5px;
+  }
+  .header-actions .button,
+  .notification-button,
+  .icon-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .stat-card {
+    padding: 18px 14px;
+  }
+  .stat-card:first-child {
+    grid-column: 1 / -1;
+  }
+  .stat-title {
+    font-size: 13px;
+  }
+  .stat-number {
+    font-size: 27px;
+    white-space: normal;
+  }
+  .stat-number > span {
+    font-size: 12px;
+    color: #717587;
+  }
+  .stat-card:first-child .stat-number > span {
+    width: auto;
+  }
+  .stat-caption {
+    font-size: 12px;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .stat-caption .brand.small {
+    width: 18px;
+    height: 18px;
+  }
+  .calendar-toolbar {
+    gap: 12px;
+    padding: 16px 12px;
+  }
+  .month-nav {
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .month-nav h2 {
+    width: 100%;
+    font-size: 20px;
+  }
+  .month-nav .icon-button,
+  .today-button,
+  .view-toggle button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .today-button {
+    font-size: 14px;
+  }
+  .view-toggle svg {
+    width: 19px;
+  }
+  .calendar-options {
+    align-self: flex-end;
+  }
+  .weekdays span {
+    font-size: 12px;
+  }
+  .calendar-day {
+    min-height: 95px;
+    padding: 3px 1px;
+  }
+  .day-number {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  .calendar-event {
+    min-height: 44px;
+    padding: 5px;
+    justify-content: center;
+  }
+  .event-name {
+    font-size: 14px;
+  }
+  .event-name > span:last-child,
+  .event-price {
+    display: none;
+  }
+  .calendar-event .brand.small {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .more-events {
+    font-size: 12px;
+    min-height: 44px;
+    padding: 4px 0;
+  }
+  .calendar-footer {
+    font-size: 12px;
+    line-height: 1.6;
+    flex-wrap: wrap;
+    padding: 14px;
+    gap: 6px;
+  }
+  .calendar-footer strong {
+    font-size: 14px;
+  }
+  .renewal-row {
+    padding: 16px 12px;
+    gap: 12px;
+    min-height: 80px;
+  }
+  .renewal-name {
+    min-width: 0;
+  }
+  .renewal-name strong {
+    font-size: 15px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+  .renewal-name > span,
+  .renewal-price > span {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .renewal-price {
+    flex-shrink: 0;
+  }
+  .renewal-price strong {
+    font-size: 15px;
+  }
+  .section-description,
+  .settings-description,
+  .field-hint,
+  .info-note p,
+  .reminder-setting-row p,
+  .reminder-card p,
+  .quiet-note p,
+  .empty-state p,
+  .calendar-empty p,
+  .modal-copy {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .section-heading h2,
+  .section-toolbar h2 {
+    font-size: 19px;
+  }
+  .count-badge,
+  .reminder-card small,
+  .page-footer,
+  .text-button {
+    font-size: 12px;
+  }
+  .reminder-enable,
+  .button,
+  .modal-footer .button,
+  .calendar-empty .button {
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .all-subscriptions,
+  .text-button {
+    min-height: 44px;
+  }
+  .empty-state h3,
+  .calendar-empty h3 {
+    font-size: 20px;
+  }
+  .calendar-empty {
+    width: min(320px, 95%);
+  }
+  .calendar-empty .text-button {
+    font-size: 14px;
+  }
+  .demo-banner {
+    flex-wrap: wrap;
+    font-size: 13px;
+    padding: 14px;
+  }
+  .demo-banner button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .section-toolbar {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .search-field,
+  .search-field input {
+    width: 100%;
+  }
+  .search-field input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .table-head {
+    display: none;
+  }
+  .subscription-table-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 18px 14px;
+    font-size: 14px;
+  }
+  .table-service {
+    grid-column: 1 / -1;
+    padding-right: 26px;
+    gap: 12px;
+  }
+  .subscription-table-row strong {
+    font-size: 15px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .subscription-table-row small {
+    font-size: 12px;
+  }
+  .table-service .brand {
+    width: 36px;
+    height: 36px;
+  }
+  .subscription-table-row > span:nth-child(3) {
+    font-size: 14px;
+  }
+  .subscription-table-row > span:nth-child(4) {
+    display: block;
+  }
+  .subscription-table-row > svg {
+    grid-column: 2;
+    grid-row: 3;
+    width: 20px;
+  }
+  .status-pill {
+    font-size: 12px;
+  }
+  .reminder-setting-row strong {
+    font-size: 15px;
+  }
+  .toggle {
+    width: 52px;
+    height: 44px;
+    padding: 10px 5px;
+  }
+  .toggle > span {
+    width: 24px;
+    height: 24px;
+  }
+  .toggle.enabled > span {
+    transform: translateX(18px);
+  }
+  .modal {
+    padding: 24px 18px;
+  }
+  .field {
+    font-size: 14px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .form-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .color-row {
+    grid-template-columns: 1fr;
+  }
+  .color-options {
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .color-row fieldset {
+    min-width: 0;
+  }
+  .color-swatch {
+    width: 40px;
+    height: 44px;
+  }
+  .checkbox-label {
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .checkbox-label input {
+    width: 20px;
+    height: 20px;
+  }
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+  .delete-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .toast {
+    font-size: 14px;
+    max-width: calc(100vw - 24px);
+  }
+  .toast button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (max-width: 360px) {
+  .nav-link {
+    font-size: 11px;
+    padding-inline: 2px;
+  }
+  nav {
+    gap: 3px;
+  }
+  .sidebar {
+    padding-inline: 12px;
+  }
+  .stat-number {
+    font-size: 23px;
+  }
+}

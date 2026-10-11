@@ -5,6 +5,7 @@
 - All 15 tests, TypeScript, production build, and formatting passed for the cross-tab fix.
 - In two actual T3 preview tabs, added separate subscriptions and confirmed both tabs showed the combined $20 monthly total. Opened the same subscription in both tabs, saved $15 in the second, and attempted $99 from the stale first editor. The first displayed a conflict and the saved price remained $15.
 - Regression checks cover concurrent additions and currency edits, stale edits/deletions, deleted-record resurrection, corrupt data preservation, failed storage writes, and queued reminder updates reading the latest workspace.
+- Reviewed actual rendered phone screenshots at 390px and 320px. Phones open in list view, summary captions are 12px, renewal details are 12–15px, and form inputs are 16px. Calendar, subscriptions, and the 320px subscription dialog have no horizontal overflow. A color-picker overflow found in the narrow dialog was fixed and rechecked. Production build, TypeScript, and formatting passed.
 
 Checked locally on 2026-10-09, using Node.js 24 on Windows.
 
@@ -18,7 +19,7 @@ Checked locally on 2026-10-09, using Node.js 24 on Windows.
 
 ## Environment limits
 
-The T3 preview screenshot operation failed repeatedly and its automation host later became unavailable. No rendered screenshots were captured, so a final visual review on desktop and a real phone remains useful.
+The original 2026-10-09 run could not capture screenshots. Rendered desktop and mobile viewport screenshots were reviewed on 2026-10-10. These use a desktop browser with resized viewports; a real-phone review remains useful.
 
 The preview browser granted notification permission but returned “push service not available” when registering a push subscription. Actual device notification delivery, installation on a real phone, and a closed-app reminder are therefore **not verified**. Scheduler timing, time zones, duplicate suppression, catch-up, retries, expired endpoints, API persistence, and synchronization were verified by tests. Use **Reminders → Send a test notification** in a supported browser to check delivery before relying on reminders.
 

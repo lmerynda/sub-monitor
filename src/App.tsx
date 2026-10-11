@@ -471,7 +471,9 @@ export default function App() {
   );
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [category, setCategory] = useState('All categories');
-  const [calendarList, setCalendarList] = useState(false);
+  const [calendarList, setCalendarList] = useState(
+    () => window.matchMedia('(max-width: 740px)').matches,
+  );
   const [search, setSearch] = useState('');
   const [editor, setEditor] = useState<Subscription | 'new' | null>(null);
   const [toast, setToast] = useState('');
@@ -919,7 +921,7 @@ export default function App() {
           <section className="stats-grid" aria-label="Subscription summary">
             <div className="stat-card">
               <div className="stat-title">
-                Monthly spending
+                Estimated monthly cost
                 <span className="stat-icon purple">
                   <Wallet size={18} />
                 </span>
@@ -1103,6 +1105,7 @@ export default function App() {
                                 className={`calendar-event color-${c.subscription.color}`}
                                 onClick={() => edit(c.subscription)}
                                 title={`${c.subscription.name} · ${money(c.subscription.priceCents, currency)} · ${c.recorded ? 'Recorded charge' : 'Projected renewal'}`}
+                                aria-label={`${c.subscription.name}, ${money(c.subscription.priceCents, currency)}, ${prettyDate(c.date)}, ${c.recorded ? 'recorded charge' : 'projected renewal'}`}
                               >
                                 <span className="event-name">
                                   <Brand subscription={c.subscription} small />
