@@ -1113,8 +1113,35 @@ export default function App() {
                     monthCharges.map((c) => chargeRow(c))
                   ) : (
                     <Empty
-                      title="A quiet month"
-                      text="No charges here yet. A little breathing room."
+                      title={
+                        subscriptions.length
+                          ? 'A quiet month'
+                          : 'Your calendar is ready'
+                      }
+                      text={
+                        subscriptions.length
+                          ? 'No charges here yet. A little breathing room.'
+                          : 'Add your first subscription, or explore an example calendar.'
+                      }
+                      action={
+                        subscriptions.length ? undefined : (
+                          <div className="empty-actions">
+                            <button
+                              className="button primary"
+                              onClick={() => setEditor('new')}
+                            >
+                              <Plus size={17} />
+                              Add your first subscription
+                            </button>
+                            <button
+                              className="text-button"
+                              onClick={() => setDemo(true)}
+                            >
+                              Explore a sample calendar <ArrowRight size={14} />
+                            </button>
+                          </div>
+                        )
+                      }
                     />
                   )}
                 </div>
