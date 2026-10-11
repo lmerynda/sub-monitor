@@ -1,5 +1,11 @@
 # Verification
 
+## Improvements checked on 2026-10-10
+
+- All 15 tests, TypeScript, production build, and formatting passed for the cross-tab fix.
+- In two actual T3 preview tabs, added separate subscriptions and confirmed both tabs showed the combined $20 monthly total. Opened the same subscription in both tabs, saved $15 in the second, and attempted $99 from the stale first editor. The first displayed a conflict and the saved price remained $15.
+- Regression checks cover concurrent additions and currency edits, stale edits/deletions, deleted-record resurrection, corrupt data preservation, failed storage writes, and queued reminder updates reading the latest workspace.
+
 Checked locally on 2026-10-09, using Node.js 24 on Windows.
 
 - TypeScript check and production build passed.

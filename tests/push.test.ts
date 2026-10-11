@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { disableReminders, syncReminders } from '../src/push.ts';
 import type { Subscription } from '../shared/subscriptions.ts';
+import { STORAGE } from '../src/workspace.ts';
 
 test('browser sync orders edits and disabling, so old writes cannot recreate deleted reminders', async () => {
   const originalNavigator = Object.getOwnPropertyDescriptor(
@@ -31,6 +32,7 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true,
     value: {
+      locks: { request: async (_name: string, work: () => unknown) => work() },
       serviceWorker: {
         register: async () => {},
         ready: Promise.resolve(registration),
@@ -75,15 +77,31 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
       url: '',
       notes: '',
     };
-    const first = syncReminders([s], 'USD');
+    values.set(
+      STORAGE,
+      JSON.stringify({ version: 1, currency: 'USD', subscriptions: [s] }),
+    );
+    const first = syncReminders();
     await started;
-    const second = syncReminders([{ ...s, name: 'Second edit' }], 'USD');
+    values.set(
+      STORAGE,
+      JSON.stringify({
+        version: 1,
+        currency: 'USD',
+        subscriptions: [{ ...s, name: 'Latest edit from another tab' }],
+      }),
+    );
+    const second = syncReminders();
     const disable = disableReminders();
     assert.deepEqual(calls, ['PUT:First edit']);
     releaseFirst();
     await Promise.all([first, second, disable]);
-    assert.deepEqual(calls, ['PUT:First edit', 'PUT:Second edit', 'DELETE:']);
-    await assert.rejects(syncReminders([s], 'USD'), /enabled again/);
+    assert.deepEqual(calls, [
+      'PUT:First edit',
+      'PUT:Latest edit from another tab',
+      'DELETE:',
+    ]);
+    await assert.rejects(syncReminders(), /enabled again/);
     assert.equal(calls.length, 3);
   } finally {
     globalThis.fetch = originalFetch;

@@ -61,15 +61,24 @@ import {
   reminderStatus,
   syncReminders,
   testReminder,
+  REMINDER_CHANGE,
 } from './push';
+import { browserLock } from './browser-lock';
+import {
+  STORAGE,
+  readSaved,
+  readWorkspace,
+  validBackup,
+  updateWorkspace,
+  changeSubscription,
+  type Saved,
+} from './workspace';
 
 type View = 'calendar' | 'subscriptions' | 'reminders' | 'settings';
-type Saved = { version: 1; subscriptions: Subscription[]; currency: Currency };
 type InstallEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
-const STORAGE = 'renew-workspace-v1';
 const labels = {
   monthly: 'Monthly',
   yearly: 'Yearly',
@@ -81,35 +90,6 @@ const prettyDate = (value: string, long = false) =>
     month: long ? 'long' : 'short',
     day: 'numeric',
   });
-function readSaved(): { data: Saved; error: string } {
-  const empty: Saved = { version: 1, subscriptions: [], currency: 'USD' };
-  try {
-    const raw = localStorage.getItem(STORAGE);
-    if (!raw) return { data: empty, error: '' };
-    const data = JSON.parse(raw);
-    if (!validBackup(data)) throw new Error('Invalid backup');
-    return { data, error: '' };
-  } catch {
-    return {
-      data: empty,
-      error:
-        'Saved data could not be read. Your original data is preserved. Export a backup in Settings before starting fresh.',
-    };
-  }
-}
-function validBackup(value: unknown): value is Saved {
-  const data = value as Saved;
-  return (
-    !!data &&
-    data.version === 1 &&
-    currencies.includes(data.currency) &&
-    Array.isArray(data.subscriptions) &&
-    data.subscriptions.length <= 200 &&
-    data.subscriptions.every(validateSubscription) &&
-    new Set(data.subscriptions.map((s) => s.id)).size ===
-      data.subscriptions.length
-  );
-}
 function download(content: string, name: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a');
@@ -236,15 +216,16 @@ function SubscriptionForm({
   initialDate: string;
   currency: Currency;
   close: () => void;
-  save: (s: Subscription) => void;
-  remove: (id: string) => void;
+  save: (s: Subscription) => Promise<void>;
+  remove: (id: string) => Promise<void>;
 }) {
   const [color, setColor] = useState<Subscription['color']>(
     subscription?.color || 'violet',
   );
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
-  function submit(event: FormEvent<HTMLFormElement>) {
+  const [saving, setSaving] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const price = String(form.get('price'));
@@ -264,7 +245,14 @@ function SubscriptionForm({
     };
     if (!validateSubscription(s))
       return setError('Please check the name, price, date, and website.');
-    save(s);
+    setSaving(true);
+    try {
+      await save(s);
+    } catch (error) {
+      setError((error as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }
   return (
     <Modal
@@ -284,6 +272,11 @@ function SubscriptionForm({
             reminders will stop. This does not cancel the subscription with the
             provider.
           </p>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="modal-footer">
             <button
               className="button secondary"
@@ -293,7 +286,17 @@ function SubscriptionForm({
             </button>
             <button
               className="button danger"
-              onClick={() => remove(subscription!.id)}
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true);
+                try {
+                  await remove(subscription!.id);
+                } catch (error) {
+                  setError((error as Error).message);
+                } finally {
+                  setSaving(false);
+                }
+              }}
             >
               Delete subscription
             </button>
@@ -442,7 +445,7 @@ function SubscriptionForm({
             <button type="button" className="button secondary" onClick={close}>
               Cancel
             </button>
-            <button className="button primary" type="submit">
+            <button className="button primary" type="submit" disabled={saving}>
               {subscription ? 'Save changes' : 'Add subscription'}
             </button>
           </div>
@@ -475,6 +478,7 @@ export default function App() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushError, setPushError] = useState('');
   const [pushBusy, setPushBusy] = useState(false);
+  const [reminderRefresh, setReminderRefresh] = useState(0);
   const [online, setOnline] = useState(navigator.onLine);
   const [installEvent, setInstallEvent] = useState<InstallEvent | null>(null);
   const [installHelp, setInstallHelp] = useState(false);
@@ -505,16 +509,23 @@ export default function App() {
   const editingDate = selectedDay && selectedDay <= today ? selectedDay : today;
 
   useEffect(() => {
-    if (initial.error) return;
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(saved));
-      setStorageError('');
-    } catch {
-      setStorageError(
-        'This browser could not save your changes. Export a backup from Settings to keep them.',
-      );
-    }
-  }, [saved, initial.error]);
+    const refresh = () => {
+      const current = readSaved();
+      setStorageError(current.error);
+      if (!current.error) setSaved(current.data);
+    };
+    const changed = (event: StorageEvent) => {
+      if (event.key === STORAGE || event.key === null) refresh();
+      if (event.key === REMINDER_CHANGE || event.key === null)
+        setReminderRefresh((value) => value + 1);
+    };
+    window.addEventListener('storage', changed);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.removeEventListener('storage', changed);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
   useEffect(() => {
     void registerWorker().catch(() => {});
     const updateOnline = () => setOnline(navigator.onLine);
@@ -564,12 +575,12 @@ export default function App() {
     return () => {
       stopped = true;
     };
-  }, [online]);
+  }, [online, reminderRefresh]);
   useEffect(() => {
     if (!pushEnabled) return;
     let stopped = false;
     const sync = () =>
-      void syncReminders(saved.subscriptions, saved.currency)
+      void syncReminders()
         .then(() => {
           if (
             !stopped &&
@@ -601,35 +612,29 @@ export default function App() {
     setMonth(new Date(month.getFullYear(), month.getMonth() + offset, 1, 12));
     setSelectedDay(null);
   }
-  function saveSubscription(subscription: Subscription) {
-    if (initial.error) {
-      setToast('Recover or clear the unreadable data in Settings first.');
-      return;
-    }
-    if (
-      saved.subscriptions.length >= 200 &&
-      !saved.subscriptions.some((s) => s.id === subscription.id)
-    ) {
-      setToast('This workspace supports up to 200 subscriptions.');
-      return;
-    }
-    setSaved((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.some((s) => s.id === subscription.id)
-        ? current.subscriptions.map((s) =>
-            s.id === subscription.id ? subscription : s,
-          )
-        : [...current.subscriptions, subscription],
-    }));
+  async function changeWorkspace(change: (latest: Saved) => Saved) {
+    const next = await updateWorkspace(change);
+    // Another tab may have committed again while this promise was resolving.
+    setSaved(readWorkspace());
+    setStorageError('');
+    return next;
+  }
+  async function saveSubscription(subscription: Subscription) {
+    await changeWorkspace((current) =>
+      changeSubscription(
+        current,
+        subscription,
+        editor && editor !== 'new' ? editor : undefined,
+      ),
+    );
     setDemo(false);
     setEditor(null);
     setToast('Subscription saved. One less thing to keep in mind.');
   }
-  function removeSubscription(id: string) {
-    setSaved((current) => ({
-      ...current,
-      subscriptions: current.subscriptions.filter((s) => s.id !== id),
-    }));
+  async function removeSubscription(_id: string) {
+    await changeWorkspace((current) =>
+      changeSubscription(current, null, editor as Subscription),
+    );
     setEditor(null);
     setToast('Subscription removed.');
   }
@@ -655,7 +660,7 @@ export default function App() {
         setPushEnabled(false);
         setToast('Push reminders turned off.');
       } else {
-        await enableReminders(saved.subscriptions, currency);
+        await enableReminders();
         setPushEnabled(true);
         setToast(
           'Reminders enabled. You’ll get a heads-up at 9 a.m., three days before renewal.',
@@ -693,18 +698,22 @@ export default function App() {
       const data = JSON.parse(await file.text());
       if (!validBackup(data))
         throw new Error('This is not a valid Renew backup.');
+      const expected = localStorage.getItem(STORAGE);
       if (
         !window.confirm(
           `Replace this workspace with ${data.subscriptions.length} subscriptions from your backup?`,
         )
       )
         return;
-      if (initial.error) {
+      await browserLock('workspace', () => {
+        if (localStorage.getItem(STORAGE) !== expected)
+          throw new Error(
+            'Your workspace changed in another tab. Import again to review the replacement.',
+          );
         localStorage.setItem(STORAGE, JSON.stringify(data));
-        location.reload();
-        return;
-      }
-      setSaved(data);
+      });
+      setSaved(readWorkspace());
+      setStorageError('');
       setDemo(false);
       setToast('Backup restored. Welcome back.');
     } catch (error) {
@@ -714,14 +723,20 @@ export default function App() {
     }
   }
   function exportBackup() {
-    download(
-      initial.error
-        ? localStorage.getItem(STORAGE) || '{}'
-        : JSON.stringify(saved, null, 2),
-      `renew-backup-${today}.json`,
-      'application/json',
-    );
-    setToast('Backup downloaded. Keep it somewhere safe.');
+    try {
+      download(
+        storageError
+          ? localStorage.getItem(STORAGE) || '{}'
+          : JSON.stringify(readWorkspace(), null, 2),
+        `renew-backup-${today}.json`,
+        'application/json',
+      );
+      setToast('Backup downloaded. Keep it somewhere safe.');
+    } catch {
+      setToast(
+        'The browser could not read your backup. Keep this window open and check browser storage settings.',
+      );
+    }
   }
   function freshStart() {
     setDemo(false);
@@ -1458,12 +1473,12 @@ export default function App() {
                 Workspace currency
                 <select
                   value={currency}
-                  onChange={(e) =>
-                    setSaved((s) => ({
-                      ...s,
-                      currency: e.target.value as Currency,
-                    }))
-                  }
+                  onChange={(e) => {
+                    const currency = e.target.value as Currency;
+                    void changeWorkspace((s) => ({ ...s, currency })).catch(
+                      (error) => setToast(error.message),
+                    );
+                  }}
                 >
                   {currencies.map((c) => (
                     <option key={c} value={c}>
@@ -1543,17 +1558,28 @@ export default function App() {
               >
                 Explore a sample calendar <ArrowRight size={15} />
               </button>
-              {initial.error && (
+              {storageError && (
                 <button
                   className="button danger"
-                  onClick={() => {
+                  onClick={async () => {
+                    const expected = localStorage.getItem(STORAGE);
                     if (
                       window.confirm(
                         'Clear unreadable local data? Export the original backup first.',
                       )
                     ) {
-                      localStorage.removeItem(STORAGE);
-                      location.reload();
+                      try {
+                        await browserLock('workspace', () => {
+                          if (localStorage.getItem(STORAGE) !== expected)
+                            throw new Error(
+                              'Your workspace changed in another tab. Review it before clearing data.',
+                            );
+                          localStorage.removeItem(STORAGE);
+                        });
+                        location.reload();
+                      } catch (error) {
+                        setToast((error as Error).message);
+                      }
                     }
                   }}
                 >

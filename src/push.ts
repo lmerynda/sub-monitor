@@ -1,9 +1,11 @@
-import type { Currency, Subscription } from '../shared/subscriptions';
+import { browserLock } from './browser-lock';
+import { readWorkspace } from './workspace';
 
 const TOKEN_KEY = 'renew-device-token';
+export const REMINDER_CHANGE = 'renew-reminder-state';
 let mutations = Promise.resolve();
 function ordered<T>(work: () => Promise<T>): Promise<T> {
-  const result = mutations.then(work);
+  const result = mutations.then(() => browserLock('reminders', work));
   mutations = result.then(
     () => {},
     () => {},
@@ -55,26 +57,22 @@ export async function registerWorker() {
   await navigator.serviceWorker.register('/sw.js');
   return navigator.serviceWorker.ready;
 }
-export async function syncReminders(
-  subscriptions: Subscription[],
-  currency: Currency,
-) {
+export async function syncReminders() {
   return ordered(async () => {
     const registration = await registerWorker();
     const push = await registration.pushManager.getSubscription();
     if (!push) throw new Error('Notifications need to be enabled again.');
+    const { subscriptions, currency } = readWorkspace();
     await request('/api/reminders', 'PUT', {
       push: push.toJSON(),
       subscriptions,
       currency,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
+    localStorage.setItem(REMINDER_CHANGE, 'enabled');
   });
 }
-export async function enableReminders(
-  subscriptions: Subscription[],
-  currency: Currency,
-) {
+export async function enableReminders() {
   if (
     !('Notification' in window) ||
     !('PushManager' in window) ||
@@ -113,7 +111,7 @@ export async function enableReminders(
       );
     }
   }
-  await syncReminders(subscriptions, currency);
+  await syncReminders();
 }
 export async function disableReminders() {
   // Remove server data first. If offline, keep the UI explicit about the pending disable.
@@ -121,11 +119,12 @@ export async function disableReminders() {
     await request('/api/reminders', 'DELETE');
     const registration = await registerWorker();
     await (await registration.pushManager.getSubscription())?.unsubscribe();
+    localStorage.setItem(REMINDER_CHANGE, 'disabled');
   });
 }
 export async function reminderStatus() {
   if (!localStorage.getItem(TOKEN_KEY)) return false;
-  const result = await request('/api/reminders');
+  const result = await ordered(() => request('/api/reminders'));
   return result.enabled === true;
 }
 export function testReminder() {
