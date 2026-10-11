@@ -47,6 +47,7 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
     },
   });
   const calls: string[] = [];
+  const schedules: unknown[] = [];
   let releaseFirst!: () => void;
   const blocked = new Promise<void>((resolve) => {
     releaseFirst = resolve;
@@ -57,6 +58,7 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
   });
   globalThis.fetch = async (_url, options) => {
     const data = options?.body ? JSON.parse(String(options.body)) : null;
+    if (data) schedules.push(data.reminders);
     calls.push(`${options?.method}:${data?.subscriptions[0]?.name || ''}`);
     if (calls.length === 1) {
       firstStarted();
@@ -89,6 +91,7 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
         version: 1,
         currency: 'USD',
         subscriptions: [{ ...s, name: 'Latest edit from another tab' }],
+        reminders: { daysBefore: 7, hour: 20 },
       }),
     );
     const second = syncReminders();
@@ -96,6 +99,7 @@ test('browser sync orders edits and disabling, so old writes cannot recreate del
     assert.deepEqual(calls, ['PUT:First edit']);
     releaseFirst();
     await Promise.all([first, second, disable]);
+    assert.deepEqual(schedules, [undefined, { daysBefore: 7, hour: 20 }]);
     assert.deepEqual(calls, [
       'PUT:First edit',
       'PUT:Latest edit from another tab',

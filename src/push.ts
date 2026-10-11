@@ -62,11 +62,12 @@ export async function syncReminders() {
     const registration = await registerWorker();
     const push = await registration.pushManager.getSubscription();
     if (!push) throw new Error('Notifications need to be enabled again.');
-    const { subscriptions, currency } = readWorkspace();
+    const { subscriptions, currency, reminders } = readWorkspace();
     await request('/api/reminders', 'PUT', {
       push: push.toJSON(),
       subscriptions,
       currency,
+      reminders,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     localStorage.setItem(REMINDER_CHANGE, 'enabled');

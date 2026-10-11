@@ -65,6 +65,12 @@ import {
 } from './push';
 import { browserLock } from './browser-lock';
 import {
+  defaultReminderPreferences,
+  reminderLeadTimes,
+  leadLabel,
+  hourLabel,
+} from '../shared/reminder-preferences';
+import {
   STORAGE,
   readSaved,
   readWorkspace,
@@ -211,6 +217,7 @@ function SubscriptionForm({
   close,
   save,
   remove,
+  reminderLead,
 }: {
   subscription?: Subscription;
   initialDate: string;
@@ -218,6 +225,7 @@ function SubscriptionForm({
   close: () => void;
   save: (s: Subscription) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  reminderLead: string;
 }) {
   const [color, setColor] = useState<Subscription['color']>(
     subscription?.color || 'violet',
@@ -456,7 +464,8 @@ function SubscriptionForm({
           <div className="reminder-note">
             <Bell size={17} />
             <span>
-              A heads-up <strong>3 days before</strong> every renewal.
+              A heads-up <strong>{reminderLead}</strong> every renewal when push
+              reminders are enabled.
             </span>
           </div>
           {error && (
@@ -522,9 +531,12 @@ export default function App() {
     ? sampleSubscriptions(parseDate(today))
     : saved.subscriptions;
   const currency = saved.currency;
+  const reminderPrefs = saved.reminders ?? defaultReminderPreferences;
   const active = subscriptions.filter((s) => s.active);
   const upcoming = upcomingRenewals(subscriptions, today);
-  const urgent = upcoming.filter((c) => daysBetween(today, c.date) <= 3);
+  const urgent = upcoming.filter(
+    (c) => daysBetween(today, c.date) <= reminderPrefs.daysBefore,
+  );
   const monthStart = dateKey(month);
   const monthEnd = dateKey(
     new Date(month.getFullYear(), month.getMonth() + 1, 0, 12),
@@ -698,7 +710,7 @@ export default function App() {
         await enableReminders();
         setPushEnabled(true);
         setToast(
-          'Reminders enabled. You’ll get a heads-up at 9 a.m., three days before renewal.',
+          `Reminders enabled: ${leadLabel(reminderPrefs.daysBefore)} at ${hourLabel(reminderPrefs.hour)}. Send a test notification to check delivery.`,
         );
       }
     } catch (error) {
@@ -711,9 +723,12 @@ export default function App() {
   }
   async function sendTest() {
     setPushBusy(true);
+    setPushError('');
     try {
       await testReminder();
-      setToast('Test sent. Check your device’s notifications.');
+      setToast(
+        'Test accepted by the push service. Check your device’s notifications to confirm delivery.',
+      );
     } catch (error) {
       setPushError((error as Error).message);
     } finally {
@@ -810,7 +825,11 @@ export default function App() {
         </span>
         <span className="renewal-price">
           <strong>{money(charge.subscription.priceCents, currency)}</strong>
-          <span className={days >= 0 && days <= 3 ? 'due-soon' : ''}>
+          <span
+            className={
+              days >= 0 && days <= reminderPrefs.daysBefore ? 'due-soon' : ''
+            }
+          >
             {days === 0
               ? 'Today'
               : days === 1
@@ -1285,8 +1304,9 @@ export default function App() {
                   you’ll know.
                 </h3>
                 <p>
-                  Get a reminder <strong>3 days before</strong> every renewal.
-                  Time to keep it, or let it go.
+                  Get a reminder{' '}
+                  <strong>{leadLabel(reminderPrefs.daysBefore)}</strong> every
+                  renewal. Time to keep it, or let it go.
                 </p>
                 <button
                   className="reminder-enable"
@@ -1305,7 +1325,7 @@ export default function App() {
                 </button>
                 <small>
                   {pushEnabled
-                    ? '9 a.m. in your device’s time zone'
+                    ? `${hourLabel(reminderPrefs.hour)} in your device’s time zone`
                     : 'A gentle nudge. No surprises.'}
                 </small>
                 {pushError && (
@@ -1430,9 +1450,10 @@ export default function App() {
                 <Bell size={20} />
               </div>
               <p className="settings-description">
-                Get a notification at 9 a.m., three days before a subscription
-                renews. Reminders are sent even when Renew is closed, while the
-                reminder server is running.
+                Get a notification {leadLabel(reminderPrefs.daysBefore)} at{' '}
+                {hourLabel(reminderPrefs.hour)} in your device’s time zone. The
+                reminder server can send notifications while Renew is closed.
+                Enable them and send a test to check delivery on this device.
               </p>
               <div className="reminder-setting-row">
                 <div>
@@ -1454,6 +1475,60 @@ export default function App() {
                   <span />
                 </button>
               </div>
+              <div className="form-row reminder-preferences">
+                <label className="field">
+                  Remind me
+                  <select
+                    value={reminderPrefs.daysBefore}
+                    disabled={demo}
+                    onChange={(e) => {
+                      const daysBefore = Number(
+                        e.target.value,
+                      ) as typeof reminderPrefs.daysBefore;
+                      void changeWorkspace((s) => ({
+                        ...s,
+                        reminders: {
+                          ...(s.reminders ?? defaultReminderPreferences),
+                          daysBefore,
+                        },
+                      })).catch((error) => setToast(error.message));
+                    }}
+                  >
+                    {reminderLeadTimes.map((days) => (
+                      <option key={days} value={days}>
+                        {leadLabel(days)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  Send at (local time)
+                  <select
+                    value={reminderPrefs.hour}
+                    disabled={demo}
+                    onChange={(e) => {
+                      const hour = Number(e.target.value);
+                      void changeWorkspace((s) => ({
+                        ...s,
+                        reminders: {
+                          ...(s.reminders ?? defaultReminderPreferences),
+                          hour,
+                        },
+                      })).catch((error) => setToast(error.message));
+                    }}
+                  >
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <option key={hour} value={hour}>
+                        {hourLabel(hour)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="field-hint">
+                Timing is saved in your backup and applies to future unsent
+                reminders. Previously sent renewals are not sent again.
+              </p>
               {pushError && (
                 <p className="form-error" role="alert">
                   {pushError}
@@ -1491,7 +1566,11 @@ export default function App() {
               ) : (
                 <Empty
                   title="You’re all caught up"
-                  text="No renewals in the next three days. Enjoy the breathing room."
+                  text={
+                    reminderPrefs.daysBefore === 0
+                      ? 'No renewals today. Enjoy the breathing room.'
+                      : `No renewals in the next ${reminderPrefs.daysBefore} days. Enjoy the breathing room.`
+                  }
                   small
                 />
               )}
@@ -1640,6 +1719,7 @@ export default function App() {
           close={() => setEditor(null)}
           save={saveSubscription}
           remove={removeSubscription}
+          reminderLead={leadLabel(reminderPrefs.daysBefore)}
         />
       )}
       {installHelp && (

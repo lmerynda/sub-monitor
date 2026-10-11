@@ -78,7 +78,21 @@ test(
         subscriptions: [],
         currency: 'USD',
         timeZone: 'America/Chicago',
+        reminders: { daysBefore: 7, hour: 20 },
       };
+      assert.equal(
+        (
+          await fetch(`${base}/api/reminders`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({
+              ...input,
+              reminders: { daysBefore: 7, hour: 24 },
+            }),
+          })
+        ).status,
+        400,
+      );
       assert.equal(
         (
           await fetch(`${base}/api/reminders`, {
@@ -117,6 +131,10 @@ test(
         await readFile(resolve(directory, 'devices.json'), 'utf8'),
       );
       assert.equal(Object.keys(disk).length, 1);
+      assert.deepEqual(
+        (Object.values(disk)[0] as { reminders: unknown }).reminders,
+        input.reminders,
+      );
       assert.equal(JSON.stringify(disk).includes(token), false);
       assert.equal(
         (await fetch(`${base}/api/reminders`, { method: 'DELETE', headers }))

@@ -3,18 +3,25 @@ import type { PushSubscription } from 'web-push';
 import {
   currencies,
   money,
-  nextRenewal,
+  chargesBetween,
+  addDays,
   daysBetween,
   validateSubscription,
   type Subscription,
   type Currency,
 } from '../shared/subscriptions.ts';
+import {
+  defaultReminderPreferences,
+  validReminderPreferences,
+  type ReminderPreferences,
+} from '../shared/reminder-preferences.ts';
 
 export type Device = {
   push: PushSubscription;
   subscriptions: Subscription[];
   currency: Currency;
   timeZone: string;
+  reminders?: ReminderPreferences;
   sent: string[];
   updatedAt: string;
 };
@@ -70,6 +77,8 @@ export function validDeviceInput(
     new Set(input.subscriptions.map((s) => s.id)).size !==
       input.subscriptions.length ||
     !currencies.includes(input.currency) ||
+    (input.reminders !== undefined &&
+      !validReminderPreferences(input.reminders)) ||
     typeof input.timeZone !== 'string'
   )
     return false;
@@ -98,13 +107,17 @@ export function localClock(now: Date, timeZone: string) {
 }
 export function pendingReminders(device: Device, now: Date) {
   const { today, hour } = localClock(now, device.timeZone);
-  if (hour < 9) return [];
-  return device.subscriptions.flatMap((subscription) => {
-    const due = nextRenewal(subscription, today);
-    if (!due) return [];
+  const prefs = device.reminders ?? defaultReminderPreferences;
+  if (hour < prefs.hour) return [];
+  return chargesBetween(
+    device.subscriptions.filter((s) => s.active),
+    today,
+    addDays(today, prefs.daysBefore),
+  ).flatMap(({ subscription, date: due, recorded }) => {
+    if (recorded) return [];
     const days = daysBetween(today, due);
     const tag = `${subscription.id}:${due}`;
-    if (days > 3 || device.sent.includes(tag)) return [];
+    if (device.sent.includes(tag)) return [];
     return [
       {
         tag,

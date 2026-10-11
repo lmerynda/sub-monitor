@@ -132,3 +132,78 @@ test('push inputs accept supported services and reject arbitrary outbound reques
     false,
   );
 });
+
+test('custom lead time and local hour support renewal-day reminders and catch-up without duplicates', async () => {
+  const custom = device();
+  custom.reminders = { daysBefore: 1, hour: 20 };
+  assert.equal(
+    pendingReminders(custom, new Date('2026-10-10T02:00:00Z')).length,
+    0,
+  );
+  assert.equal(
+    pendingReminders(custom, new Date('2026-10-11T23:00:00Z')).length,
+    0,
+  );
+  assert.equal(
+    pendingReminders(custom, new Date('2026-10-12T01:00:00Z'))[0].title,
+    'Example renews tomorrow',
+  );
+  custom.reminders = { daysBefore: 0, hour: 0 };
+  assert.equal(
+    pendingReminders(custom, new Date('2026-10-12T04:59:00Z')).length,
+    0,
+  );
+  assert.equal(
+    pendingReminders(custom, new Date('2026-10-12T05:00:00Z'))[0].title,
+    'Example renews today',
+  );
+  const store: DeviceStore = { custom };
+  let sent = 0;
+  await deliverReminders(store, new Date('2026-10-12T05:00:00Z'), async () => {
+    sent++;
+  });
+  custom.reminders = { daysBefore: 7, hour: 0 };
+  await deliverReminders(store, new Date('2026-10-12T06:00:00Z'), async () => {
+    sent++;
+  });
+  assert.equal(sent, 1);
+});
+
+test('seven-day weekly reminders include the following renewal when the current one is today', () => {
+  const weekly = device();
+  weekly.reminders = { daysBefore: 7, hour: 9 };
+  weekly.subscriptions = [
+    { ...subscription, cycle: 'weekly', lastCharge: '2026-10-05' },
+  ];
+  weekly.sent = ['test:2026-10-12'];
+  assert.deepEqual(
+    pendingReminders(weekly, new Date('2026-10-12T14:00:00Z')).map(
+      (r) => r.tag,
+    ),
+    ['test:2026-10-19'],
+  );
+  weekly.subscriptions = [
+    { ...subscription, dateKind: 'next-renewal', lastCharge: '2026-10-15' },
+  ];
+  assert.equal(
+    pendingReminders(weekly, new Date('2026-10-08T14:00:00Z'))[0].tag,
+    'test:2026-10-15',
+  );
+});
+
+test('reminder timing defaults remain compatible and invalid preferences are rejected', () => {
+  assert.equal(validDeviceInput(device()), true);
+  assert.equal(
+    validDeviceInput({ ...device(), reminders: { daysBefore: 7, hour: 23 } }),
+    true,
+  );
+  for (const reminders of [
+    null,
+    {},
+    { daysBefore: -1, hour: 9 },
+    { daysBefore: 2, hour: 9 },
+    { daysBefore: 3, hour: 24 },
+    { daysBefore: 3, hour: 1.5 },
+  ])
+    assert.equal(validDeviceInput({ ...device(), reminders }), false);
+});

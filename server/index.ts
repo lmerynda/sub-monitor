@@ -7,6 +7,11 @@ import { readFile, writeFile, mkdir, rename, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import webpush from 'web-push';
 import {
+  defaultReminderPreferences,
+  hourLabel,
+  leadLabel,
+} from '../shared/reminder-preferences.ts';
+import {
   tokenKey,
   validToken,
   validDeviceInput,
@@ -110,11 +115,12 @@ const server = createServer(async (request, response) => {
           if (!store[id])
             return json(response, 404, { error: 'Enable reminders first.' });
           try {
+            const prefs = store[id].reminders ?? defaultReminderPreferences;
             await webpush.sendNotification(
               store[id].push,
               JSON.stringify({
                 title: 'Your reminders are ready',
-                body: 'You’ll get a heads-up three days before renewal.',
+                body: `Your reminder schedule is ${leadLabel(prefs.daysBefore)} at ${hourLabel(prefs.hour)} in ${store[id].timeZone}.`,
                 tag: 'renew-test',
               }),
               { TTL: 3600, timeout: 10000 },

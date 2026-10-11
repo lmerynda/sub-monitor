@@ -6,6 +6,7 @@ import {
   readWorkspace,
   updateWorkspace,
   changeSubscription,
+  validBackup,
 } from '../src/workspace.ts';
 import type { Subscription } from '../shared/subscriptions.ts';
 
@@ -112,4 +113,22 @@ test('concurrent workspace edits merge latest data and stale edits cannot overwr
       Object.defineProperty(globalThis, 'localStorage', previousStorage);
     else Reflect.deleteProperty(globalThis, 'localStorage');
   }
+});
+
+test('backups retain reminder timing and accept legacy workspaces with default timing', () => {
+  assert.equal(validBackup(emptyWorkspace()), true);
+  assert.equal(
+    validBackup({
+      ...emptyWorkspace(),
+      reminders: { daysBefore: 7, hour: 20 },
+    }),
+    true,
+  );
+  assert.equal(
+    validBackup({
+      ...emptyWorkspace(),
+      reminders: { daysBefore: 3, hour: 24 },
+    }),
+    false,
+  );
 });

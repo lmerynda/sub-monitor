@@ -5,11 +5,16 @@ import {
   type Subscription,
 } from '../shared/subscriptions';
 import { browserLock } from './browser-lock';
+import {
+  validReminderPreferences,
+  type ReminderPreferences,
+} from '../shared/reminder-preferences';
 
 export type Saved = {
   version: 1;
   subscriptions: Subscription[];
   currency: Currency;
+  reminders?: ReminderPreferences;
 };
 export const STORAGE = 'renew-workspace-v1';
 export const emptyWorkspace = (): Saved => ({
@@ -24,6 +29,8 @@ export function validBackup(value: unknown): value is Saved {
     !!data &&
     data.version === 1 &&
     currencies.includes(data.currency) &&
+    (data.reminders === undefined ||
+      validReminderPreferences(data.reminders)) &&
     Array.isArray(data.subscriptions) &&
     data.subscriptions.length <= 200 &&
     data.subscriptions.every(validateSubscription) &&
