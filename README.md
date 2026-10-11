@@ -4,7 +4,7 @@ A small subscription calendar, built with React, TypeScript, Vite, and a Node.js
 
 ## Run locally
 
-Requires Node.js 22.12+ and npm.
+Requires Node.js 24 and npm.
 
 ```sh
 npm install
@@ -46,6 +46,23 @@ The server generates VAPID keys in `.data/vapid.json` on first launch and persis
 ## PWA
 
 The manifest includes 192px and 512px icons and a standalone window. Use Settings → Install Renew or the browser's install menu. The built service worker pre-caches the full application shell for offline use. Development modules intentionally aren't cached; use the built app to verify offline behavior. The Node server serves the build and reminder API together; a static-only host cannot send scheduled reminders. For use on your phone, host the Node server behind HTTPS; localhost refers to the device you're using.
+
+## Deploy to Railway
+
+Deploy this repository's `master` branch as one Node service. `railway.json` configures the production build, start command, API health check, and crash retries. Node.js 24 is selected by `package.json`; `tsx` is a production dependency because the server uses it at runtime.
+
+Before the first deployment, attach a persistent volume at `/data` and configure these service variables:
+
+| Variable          | Value                                           |
+| ----------------- | ----------------------------------------------- |
+| `HOST`            | `0.0.0.0`                                       |
+| `DATA_DIR`        | `/data`                                         |
+| `RAILPACK_NO_SPA` | `1`                                             |
+| `VAPID_SUBJECT`   | `mailto:` followed by your real contact address |
+
+Use Railway's supplied `PORT`. `RAILPACK_NO_SPA=1` prevents Vite detection from deploying only the static frontend; the Node process must also run the reminder API and scheduler. Keep one instance in one region, with Serverless/app sleeping disabled so the scheduler continues while the app is closed. Generate a Railway domain for the shared frontend/API HTTPS address.
+
+The volume retains `vapid.json` and `devices.json` across restarts and redeployments. Keep its contents private and back them up. A deployment starts a fresh hosted reminder store; local `.data` files are not uploaded. Calendar subscriptions remain in each browser's storage, so export/import a JSON backup to move an existing workspace from localhost to the hosted address. Enable reminders again at the new address, then complete the [real-device checks](docs/reminder-device-checks.md).
 
 ## Checks
 
