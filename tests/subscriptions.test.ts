@@ -103,6 +103,45 @@ test('validation rejects invalid dates, prices, URLs and blank names', () => {
     { url: 'javascript:alert(1)' },
     { url: 'https://' },
     { cycle: 'daily' },
+    { dateKind: 'unknown' },
   ])
     assert.equal(validateSubscription({ ...subscription, ...change }), false);
+});
+
+test('next billing date anchors the first renewal without inventing recorded charges', () => {
+  const next = { ...subscription, dateKind: 'next-renewal' as const };
+  assert.equal(validateSubscription(next), true);
+  assert.equal(nextRenewal(next, '2026-01-01'), '2026-01-31');
+  assert.equal(nextRenewal(next, '2026-01-31'), '2026-01-31');
+  assert.equal(nextRenewal(next, '2026-02-01'), '2026-02-28');
+  assert.equal(nextRenewal(next, '2026-03-01'), '2026-03-31');
+  assert.deepEqual(
+    chargesBetween([next], '2026-01-01', '2026-03-31').map((c) => [
+      c.date,
+      c.recorded,
+    ]),
+    [
+      ['2026-01-31', false],
+      ['2026-02-28', false],
+      ['2026-03-31', false],
+    ],
+  );
+  assert.deepEqual(
+    chargesBetween([{ ...next, active: false }], '2026-01-01', '2026-03-31'),
+    [],
+  );
+  assert.equal(
+    nextRenewal(
+      { ...next, cycle: 'yearly', lastCharge: '2024-02-29' },
+      '2028-01-01',
+    ),
+    '2028-02-29',
+  );
+  assert.equal(
+    nextRenewal(
+      { ...next, cycle: 'weekly', lastCharge: '2026-12-28' },
+      '2026-12-29',
+    ),
+    '2027-01-04',
+  );
 });

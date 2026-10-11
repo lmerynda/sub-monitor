@@ -24,7 +24,7 @@ Open **http://localhost:3001**. Keep this server running for scheduled push remi
 
 ## How it works
 
-- Enter the name, price, last charge date, and billing cycle (weekly, monthly, quarterly, or yearly).
+- Enter the name, price, either the last charge date or next billing date, and billing cycle (weekly, monthly, quarterly, or yearly). Next-date entries start with a projected renewal and do not invent a past charge. Existing entries and backups retain their recorded-charge behavior.
 - The calendar shows the recorded charge and projected renewals. Monthly and annual dates retain the original anchor through short months and leap years.
 - View estimated monthly spending, upcoming renewals, categories, and active/inactive subscriptions. Changing the currency changes labels, not exchange rates.
 - Phones open in list view with readable renewal details. You can switch to the calendar grid; subscription lists and forms adapt to narrow screens with larger controls. Estimated monthly cost normalizes billing cycles and is not the amount charged in a specific calendar month.

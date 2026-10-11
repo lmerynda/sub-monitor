@@ -6,6 +6,7 @@
 - In two actual T3 preview tabs, added separate subscriptions and confirmed both tabs showed the combined $20 monthly total. Opened the same subscription in both tabs, saved $15 in the second, and attempted $99 from the stale first editor. The first displayed a conflict and the saved price remained $15.
 - Regression checks cover concurrent additions and currency edits, stale edits/deletions, deleted-record resurrection, corrupt data preservation, failed storage writes, and queued reminder updates reading the latest workspace.
 - Reviewed actual rendered phone screenshots at 390px and 320px. Phones open in list view, summary captions are 12px, renewal details are 12–15px, and form inputs are 16px. Calendar, subscriptions, and the 320px subscription dialog have no horizontal overflow. A color-picker overflow found in the narrow dialog was fixed and rechecked. Production build, TypeScript, and formatting passed.
+- Next-billing-date entry passed all 16 tests and the production build. A browser-created next-date subscription was edited to October 31 and showed October 31 as its first renewal. Regression coverage verifies no invented recorded charge, inactive entries, weekly/yearly cycles, and restoration of the month-end anchor after short months. Legacy entries remain valid.
 
 Checked locally on 2026-10-09, using Node.js 24 on Windows.
 

@@ -20,6 +20,8 @@ export type Subscription = {
   name: string;
   priceCents: number;
   lastCharge: string;
+  // Legacy entries anchor on a recorded charge; next-renewal entries invent no history.
+  dateKind?: 'last-charge' | 'next-renewal';
   cycle: (typeof cycles)[number];
   category: (typeof categories)[number];
   color: (typeof colors)[number];
@@ -108,7 +110,11 @@ export function chargesBetween(
   const charges: Charge[] = [];
   for (const subscription of subscriptions) {
     if (!subscription.active) {
-      if (subscription.lastCharge >= from && subscription.lastCharge <= to) {
+      if (
+        subscription.dateKind !== 'next-renewal' &&
+        subscription.lastCharge >= from &&
+        subscription.lastCharge <= to
+      ) {
         charges.push({
           subscription,
           date: subscription.lastCharge,
@@ -121,7 +127,11 @@ export function chargesBetween(
       const date = occurrence(subscription, index);
       if (date > to) break;
       if (date >= from)
-        charges.push({ subscription, date, recorded: index === 0 });
+        charges.push({
+          subscription,
+          date,
+          recorded: index === 0 && subscription.dateKind !== 'next-renewal',
+        });
     }
   }
   return charges.sort(
@@ -136,7 +146,14 @@ export function nextRenewal(
   today = dateKey(new Date()),
 ): string | null {
   if (!subscription.active) return null;
-  for (let index = Math.max(1, indexNear(subscription, today)); ; index++) {
+  for (
+    let index = Math.max(
+      subscription.dateKind === 'next-renewal' ? 0 : 1,
+      indexNear(subscription, today),
+    );
+    ;
+    index++
+  ) {
     const date = occurrence(subscription, index);
     if (date >= today) return date;
   }
@@ -189,6 +206,9 @@ export function validateSubscription(value: unknown): value is Subscription {
     s.priceCents >= 0 &&
     s.priceCents <= 100000000 &&
     isDate(s.lastCharge) &&
+    (s.dateKind === undefined ||
+      s.dateKind === 'last-charge' ||
+      s.dateKind === 'next-renewal') &&
     cycles.includes(s.cycle) &&
     categories.includes(s.category) &&
     colors.includes(s.color) &&

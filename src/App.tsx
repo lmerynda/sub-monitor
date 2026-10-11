@@ -225,6 +225,12 @@ function SubscriptionForm({
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dateKind, setDateKind] = useState<
+    NonNullable<Subscription['dateKind']>
+  >(subscription?.dateKind ?? 'last-charge');
+  const [billingDate, setBillingDate] = useState(
+    subscription?.lastCharge ?? initialDate,
+  );
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -236,6 +242,7 @@ function SubscriptionForm({
       name: String(form.get('name')).trim(),
       priceCents: Math.round(Number(price) * 100),
       lastCharge: String(form.get('lastCharge')),
+      dateKind,
       cycle: form.get('cycle') as Subscription['cycle'],
       category: form.get('category') as Subscription['category'],
       color,
@@ -345,15 +352,39 @@ function SubscriptionForm({
               </select>
             </label>
           </div>
+          <label className="field">
+            Billing date to use
+            <select
+              value={dateKind}
+              onChange={(e) => {
+                const kind = e.target.value as NonNullable<
+                  Subscription['dateKind']
+                >;
+                setDateKind(kind);
+                if (kind === 'last-charge' && billingDate > dateKey(new Date()))
+                  setBillingDate(dateKey(new Date()));
+              }}
+            >
+              <option value="last-charge">I know the last charge date</option>
+              <option value="next-renewal">I know the next billing date</option>
+            </select>
+          </label>
           <div className="form-row">
             <label className="field">
-              Last charged on
+              {dateKind === 'next-renewal'
+                ? 'Next billing date'
+                : 'Last charged on'}
               <input
                 name="lastCharge"
                 type="date"
                 min="2000-01-01"
-                max={dateKey(new Date())}
-                defaultValue={subscription?.lastCharge || initialDate}
+                max={
+                  dateKind === 'next-renewal'
+                    ? '2100-12-31'
+                    : dateKey(new Date())
+                }
+                value={billingDate}
+                onChange={(e) => setBillingDate(e.target.value)}
                 required
               />
             </label>
@@ -370,8 +401,10 @@ function SubscriptionForm({
             </label>
           </div>
           <p className="field-hint">
-            <RefreshCw size={13} /> Future renewals are calculated from this
-            charge date.
+            <RefreshCw size={13} />{' '}
+            {dateKind === 'next-renewal'
+              ? 'Renewals start on this date. No past charge is assumed.'
+              : 'Future renewals are calculated from this charge date.'}
           </p>
           <label className="field">
             Website <span className="optional">optional</span>
